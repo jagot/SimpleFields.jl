@@ -46,14 +46,15 @@ call{U<:AbstractFloat}(field::Field{U}, t::AbstractVector{U}) = map(field, t)
 # in units of π. The pulse will be centered at tmax/2.
 function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
                                  tmax::U, fwhm::U,
+                                 q::U = 1.0,
                                  env = gaussian,
                                  cep = 0.0)
     λ,T,ω = fundamental(λ_SI)
     I = intensity(I_SI)
     E = sqrt(I)
     fwhm /= 2.41888430e-17T
-    LinearField(λ, T, ω, tmax, t -> E*gaussian(t-tmax/2, fwhm)*sin(2π*(t-tmax/2) + cep*π))
+    LinearField(λ, T, ω, tmax, t -> E*env(t-tmax/2, fwhm)*sin(2π*q*(t-tmax/2) + q*cep*π))
 end
 
-export Field, pulse, call
+export Field, CompositeField, pulse, call
 end # module
