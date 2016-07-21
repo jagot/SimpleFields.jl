@@ -1,8 +1,28 @@
 module SimpleFields
 using FixedSizeArrays
-import Base: call
+import Base: eltype, call, zero, (+)
 
 abstract Field{U<:AbstractFloat}
+eltype{U<:AbstractFloat}(f::Field{U}) = U
+
+type CompositeField{U<:AbstractFloat,F<:Field} <: Field{U}
+    components::Vector{F}
+end
+
+function call{U<:AbstractFloat,F<:Field}(field::CompositeField{U,F}, t::U)
+    f = zero(F)
+    for c in field.components
+        f += c(t)
+    end
+    f
+end
+
+(+){F<:Field}(a::F, b::F) = CompositeField{eltype(a),F}([a, b])
+
+function (+){F<:Field}(a::CompositeField, b::F)
+    eltype(a.components) == typeof(b) || error("Can only add fields of same type")
+    CompositeField{eltype(a),F}([a.components..., b])
+end
 
 # λ_SI in meters
 function fundamental{U<:AbstractFloat}(λ_SI::U)
@@ -27,7 +47,8 @@ type LinearField{U<:AbstractFloat} <: Field{U}
     Ez::Function
 end
 
-call{U<:AbstractFloat}(field::LinearField, t::U) = field.Ez(t)
+call{U<:AbstractFloat}(field::LinearField{U}, t::U) = field.Ez(t)
+zero{U<:AbstractFloat}(::Type{LinearField{U}}) = zero(U)
 
 type TransverseField{U<:AbstractFloat} <: Field{U}
     λ::U
@@ -38,7 +59,8 @@ type TransverseField{U<:AbstractFloat} <: Field{U}
     Ex::Function
 end
 
-call{U<:AbstractFloat}(field::TransverseField, t::U) = Vec{2,Float64}(field.Ez(t),field.Ex(t))
+call{U<:AbstractFloat}(field::TransverseField{U}, t::U) = Vec{2,U}(field.Ez(t),field.Ex(t))
+zero{U<:AbstractFloat}(::Type{TransverseField{U}}) = Vec{2,U}(zero(U), zero(U))
 
 call{U<:AbstractFloat}(field::Field{U}, t::AbstractVector{U}) = map(field, t)
 
@@ -56,5 +78,5 @@ function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
     LinearField(λ, T, ω, tmax, t -> E*env(t-tmax/2, fwhm)*sin(2π*q*(t-tmax/2) + q*cep*π))
 end
 
-export Field, CompositeField, pulse, call
+export Field, CompositeField, pulse, eltype, call, (+)
 end # module
