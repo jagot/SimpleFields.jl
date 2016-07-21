@@ -7,6 +7,10 @@ eltype{U<:AbstractFloat}(::Type{Field{U}}) = U
 
 type CompositeField{U<:AbstractFloat} <: Field{U}
     components::Vector{Field}
+    λ::U
+    T::U
+    ω::U
+    tmax::U
     zero
 end
 
@@ -20,23 +24,29 @@ end
 
 function (+){F1<:Field,F2<:Field}(a::F1, b::F2)
     zero(F1) == zero(F2) || error("Can only add fields of same type")
-    CompositeField{eltype(a)}([a, b], zero(F1))
+    a.λ == b.λ || error("Can only add fields of the same fundamental wavelength")
+    CompositeField{eltype(a)}([a, b], a.λ, a.T, a.ω, max(a.tmax, b.tmax), zero(F1))
 end
 
 function (+){F<:Field}(a::CompositeField, b::F)
     a.zero == zero(typeof(b)) || error("Can only add fields of same type")
-    CompositeField{eltype(a)}([a.components..., b], a.zero)
+    a.λ == b.λ || error("Can only add fields of the same fundamental wavelength")
+    CompositeField{eltype(a)}([a.components..., b], a.λ, a.T, a.ω, max(a.tmax, b.tmax), a.zero)
 end
 
 type DelayedField{U<:AbstractFloat,F<:Field} <: Field{U}
     f::F
     tau::U
+    λ::U
+    T::U
+    ω::U
+    tmax::U
 end
 eltype{U<:AbstractFloat,F<:Field}(::Type{DelayedField{U,F}}) = eltype(F)
 call{U<:AbstractFloat}(field::DelayedField{U}, t::U) = field.f(t-field.tau)
 zero{U<:AbstractFloat,F<:Field}(::Type{DelayedField{U,F}}) = zero(F)
 
-delay{U<:AbstractFloat, F<:Field}(f::F, tau::U) = DelayedField{U,F}(f, tau)
+delay{U<:AbstractFloat, F<:Field}(f::F, tau::U) = DelayedField{U,F}(f, tau, f.λ, f.T, f.ω, f.tmax+tau)
 
 # λ_SI in meters
 function fundamental{U<:AbstractFloat}(λ_SI::U)
