@@ -3,26 +3,40 @@ using FixedSizeArrays
 import Base: eltype, call, zero, (+)
 
 abstract Field{U<:AbstractFloat}
-eltype{U<:AbstractFloat}(f::Field{U}) = U
+eltype{U<:AbstractFloat}(::Type{Field{U}}) = U
 
-type CompositeField{U<:AbstractFloat,F<:Field} <: Field{U}
-    components::Vector{F}
+type CompositeField{U<:AbstractFloat} <: Field{U}
+    components::Vector{Field}
+    zero
 end
 
-function call{U<:AbstractFloat,F<:Field}(field::CompositeField{U,F}, t::U)
-    f = zero(F)
+function call{U<:AbstractFloat}(field::CompositeField{U}, t::U)
+    f = field.zero
     for c in field.components
         f += c(t)
     end
     f
 end
 
-(+){F<:Field}(a::F, b::F) = CompositeField{eltype(a),F}([a, b])
+function (+){F1<:Field,F2<:Field}(a::F1, b::F2)
+    zero(F1) == zero(F2) || error("Can only add fields of same type")
+    CompositeField{eltype(a)}([a, b], zero(F1))
+end
 
 function (+){F<:Field}(a::CompositeField, b::F)
-    eltype(a.components) == typeof(b) || error("Can only add fields of same type")
-    CompositeField{eltype(a),F}([a.components..., b])
+    a.zero == zero(typeof(b)) || error("Can only add fields of same type")
+    CompositeField{eltype(a)}([a.components..., b], a.zero)
 end
+
+type DelayedField{U<:AbstractFloat,F<:Field} <: Field{U}
+    f::F
+    tau::U
+end
+eltype{U<:AbstractFloat,F<:Field}(::Type{DelayedField{U,F}}) = eltype(F)
+call{U<:AbstractFloat}(field::DelayedField{U}, t::U) = field.f(t-field.tau)
+zero{U<:AbstractFloat,F<:Field}(::Type{DelayedField{U,F}}) = zero(F)
+
+delay{U<:AbstractFloat, F<:Field}(f::F, tau::U) = DelayedField{U,F}(f, tau)
 
 # λ_SI in meters
 function fundamental{U<:AbstractFloat}(λ_SI::U)
@@ -78,5 +92,5 @@ function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
     LinearField(λ, T, ω, tmax, t -> E*env(t-tmax/2, fwhm)*sin(2π*q*(t-tmax/2) + q*cep*π))
 end
 
-export Field, CompositeField, pulse, eltype, call, (+)
+export Field, CompositeField, delay, pulse, eltype, call, (+)
 end # module
