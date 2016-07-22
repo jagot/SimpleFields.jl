@@ -63,15 +63,18 @@ intensity{U<:AbstractFloat}(I_SI::U) = I_SI/3.5094452e16
 # in cycles.
 gaussian{U<:AbstractFloat}(t::U, fwhm::U) = exp(-t.^2/(fwhm/(2*√(log(2)))))
 
+box{U<:AbstractFloat}(t::U, tmax::U, c::Bool) = !c || (t >= 0 && t <= tmax) ? one(U) : zero(U)
+
 type LinearField{U<:AbstractFloat} <: Field{U}
     λ::U
     T::U
     ω::U
     tmax::U
     Ez::Function
+    vanish::Bool
 end
 
-call{U<:AbstractFloat}(field::LinearField{U}, t::U) = field.Ez(t)
+call{U<:AbstractFloat}(field::LinearField{U}, t::U) = field.Ez(t)*box(t,field.tmax,field.vanish)
 zero{U<:AbstractFloat}(::Type{LinearField{U}}) = zero(U)
 
 type TransverseField{U<:AbstractFloat} <: Field{U}
@@ -81,25 +84,28 @@ type TransverseField{U<:AbstractFloat} <: Field{U}
     tmax::U
     Ez::Function
     Ex::Function
+    vanish::Bool
 end
 
-call{U<:AbstractFloat}(field::TransverseField{U}, t::U) = Vec{2,U}(field.Ez(t),field.Ex(t))
+call{U<:AbstractFloat}(field::TransverseField{U}, t::U) = Vec{2,U}(field.Ez(t),field.Ex(t))*box(t,field.tmax,field.vanish)
 zero{U<:AbstractFloat}(::Type{TransverseField{U}}) = Vec{2,U}(zero(U), zero(U))
 
 call{U<:AbstractFloat}(field::Field{U}, t::AbstractVector{U}) = map(field, t)
 
 # λ_SI in meters, I_SI in W/cm², tmax in cycles, fwhm in seconds, cep
-# in units of π. The pulse will be centered at tmax/2.
+# in units of π. The pulse will be centered at tmax/2. If vanish is
+# true, the pulse will identically vanish outside the interval [0,tmax]
 function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
                                  tmax::U, fwhm::U,
                                  q::U = 1.0,
                                  env = gaussian,
-                                 cep = 0.0)
+                                 cep = 0.0;
+                                 vanish = true)
     λ,T,ω = fundamental(λ_SI)
     I = intensity(I_SI)
     E = sqrt(I)
     fwhm /= 2.41888430e-17T
-    LinearField(λ, T, ω, tmax, t -> E*env(t-tmax/2, fwhm)*sin(2π*q*(t-tmax/2) + q*cep*π))
+    LinearField(λ, T, ω, tmax, t -> E*env(t-tmax/2, fwhm)*sin(2π*q*(t-tmax/2) + q*cep*π), vanish)
 end
 
 export Field, CompositeField, delay, pulse, eltype, call, (+)
