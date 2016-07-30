@@ -61,7 +61,7 @@ intensity{U<:AbstractFloat}(I_SI::U) = I_SI/3.5094452e16
 
 # Gaussian envelope for the amplitude, fwhm of the intensity envelope
 # in cycles.
-gaussian{U<:AbstractFloat}(t::U, fwhm::U) = exp(-t.^2/(fwhm/(2*√(log(2)))))
+gaussian{U<:AbstractFloat}(t::U, fwhm::U) = exp(-t.^2/(2(fwhm/(2*√(log(2))))^2))
 
 box{U<:AbstractFloat}(t::U, tmax::U, c::Bool) = !c || (t >= 0 && t <= tmax) ? one(U) : zero(U)
 
@@ -105,8 +105,9 @@ function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
     I = intensity(I_SI)
     E = sqrt(I)
     fwhm /= 2.41888430e-17T
-    LinearField(λ, T, ω, tmax, t -> E*env(t-tmax/2, fwhm)*sin(2π*q*(t-tmax/2) + q*cep*π), vanish)
+    LinearField(λ, T, ω, tmax,
+                t -> E*env(t-tmax/2, fwhm)*sin(2π*q*(t-tmax/2) + q*cep*π), vanish)
 end
 
-export Field, CompositeField, delay, pulse, eltype, call, (+)
+export Field, CompositeField, fundamental, delay, pulse, eltype, call, (+)
 end # module
