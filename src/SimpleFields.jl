@@ -92,22 +92,50 @@ zero{U<:AbstractFloat}(::Type{TransverseField{U}}) = Vec{2,U}(zero(U), zero(U))
 
 call{U<:AbstractFloat}(field::Field{U}, t::AbstractVector{U}) = map(field, t)
 
-# λ_SI in meters, I_SI in W/cm², tmax in cycles, fwhm in seconds, cep
-# in units of π. The pulse will be centered at tmax/2. If vanish is
-# true, the pulse will identically vanish outside the interval [0,tmax]
+function gdd_params{U<:AbstractFloat}(λ_SI::U, τ₀::U, η::U = 0.0;
+                                      gdd_phase = false)
+    γ² = τ₀^2/(8log(2))
+    γ = √(γ²)
+    γ⁴ = γ²^2
+    η² = η^2
+
+    A = γ/(γ⁴ + η²)^(1/4)
+    gdd_phase && (A *= exp(im*atan2(-η,γ²)/2))
+
+    a = 1./4*(γ²/(γ⁴ + η²))
+    b = 1./2*(η/(γ⁴ + η²))
+    A,a,b
+end
+
+# λ_SI in meters, I_SI in W/cm², tmax in cycles, (Fourier-limited)
+# fwhm in seconds, cep in units of π, gdd in seconds squared. The
+# pulse will be centered at tmax/2. If vanish is true, the pulse will
+# identically vanish outside the interval [0,tmax]
 function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
                                  tmax::U, fwhm::U,
                                  q::U = 1.0,
-                                 env = gaussian,
-                                 cep = 0.0;
+                                 cep::U = 0.0, gdd::U = 0.0;
+                                 gdd_phase = false,
                                  vanish = true)
     λ,T,ω = fundamental(λ_SI)
+    T2 = (2.41888430e-17T)^2
     I = intensity(I_SI)
-    E = sqrt(I)
-    fwhm /= 2.41888430e-17T
+    E₀ = √(I)
+
+    A,a,b = gdd_params(λ_SI, fwhm, gdd)
+
+    A *= E₀
+
+    # Transfer to cycles as time base
+    a *= T2
+    b *= T2
+
+    φ₀ = cep*π
+
     LinearField(λ, T, ω, tmax,
-                t -> E*env(t-tmax/2, fwhm)*sin(2π*q*(t-tmax/2) + q*cep*π), vanish)
+                t -> A*exp(im*2π*q*(t-tmax/2) + im*q*φ₀)*exp(-(a-im*b)*(t-tmax/2)^2),
+                vanish)
 end
 
-export Field, CompositeField, fundamental, delay, pulse, eltype, call, (+)
+export Field, CompositeField, fundamental, delay, gdd_params, pulse, eltype, call, (+)
 end # module
