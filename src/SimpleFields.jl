@@ -94,16 +94,15 @@ call{U<:AbstractFloat}(field::Field{U}, t::AbstractVector{U}) = map(field, t)
 
 function gdd_params{U<:AbstractFloat}(λ_SI::U, τ₀::U, η::U = 0.0;
                                       gdd_phase = false)
-    γ² = τ₀^2/(8log(2))
-    γ = √(γ²)
-    γ⁴ = γ²^2
+    γ = τ₀^2/(8log(2))
+    γ² = γ^2
     η² = η^2
 
-    A = γ/(γ⁴ + η²)^(1/4)
-    gdd_phase && (A *= exp(im*atan2(-η,γ²)/2))
+    A = √(γ/(γ² + η²))
+    gdd_phase && (A *= exp(im*atan2(-η,γ)/2))
 
-    a = 1./4*(γ²/(γ⁴ + η²))
-    b = 1./2*(η/(γ⁴ + η²))
+    a = 1./4*(γ/(γ² + η²))
+    b = 1./2*(η/(γ² + η²))
     A,a,b
 end
 
