@@ -131,9 +131,9 @@ function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
 
     φ₀ = cep*π
 
-    LinearField(λ, T, ω, tmax,
-                t -> A*exp(im*2π*q*(t-tmax/2) + im*q*φ₀)*exp(-(a-im*b)*(t-tmax/2)^2),
-                vanish)
+    E = t -> A*exp(im*2π*q*(t-tmax/2) + im*q*φ₀)*exp(-(a-im*b)*(t-tmax/2)^2)
+
+    LinearField(λ, T, ω, tmax, t -> real(E(t)), vanish)
 end
 
 export Field, CompositeField, fundamental, delay, gdd_params, pulse, eltype, call, (+)
