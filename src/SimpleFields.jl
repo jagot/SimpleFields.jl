@@ -98,7 +98,7 @@ function gdd_params{U<:AbstractFloat}(λ_SI::U, τ₀::U, η::U = 0.0;
     γ² = γ^2
     η² = η^2
 
-    A = √(γ/(γ² + η²))
+    A = √(γ/√(γ² + η²))
     gdd_phase && (A *= exp(im*atan2(-η,γ)/2))
 
     a = 1./4*(γ/(γ² + η²))
