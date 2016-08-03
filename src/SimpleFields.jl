@@ -121,7 +121,7 @@ function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
     I = intensity(I_SI)
     E₀ = √(I)
 
-    A,a,b = gdd_params(λ_SI, fwhm, gdd)
+    A,a,b = gdd_params(λ_SI, fwhm, gdd; gdd_phase = gdd_phase)
 
     A *= E₀
 
