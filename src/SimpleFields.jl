@@ -96,8 +96,6 @@ end
 call{U<:AbstractFloat}(field::TransverseField{U}, t::U) = Vec{2,U}(field.Ez(t),field.Ex(t))*box(t,field.tmax,field.vanish)
 zero{U<:AbstractFloat}(::Type{TransverseField{U}}) = Vec{2,U}(zero(U), zero(U))
 
-call{U<:AbstractFloat}(field::Field{U}, t::AbstractVector{U}) = map(field, t)
-
 function gdd_params{U<:AbstractFloat}(λ_SI::U, τ₀::U, η::U = zero(U);
                                       gdd_phase = false)
     γ = τ₀^2/(8log(2))
