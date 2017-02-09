@@ -50,18 +50,18 @@ delay{U<:AbstractFloat, F<:Field}(f::F, tau::U) = DelayedField{U,F}(f, tau, f.λ
 
 # λ_SI in meters
 function fundamental{U<:AbstractFloat}(λ_SI::U)
-    λ = λ_SI/5.2917721067e-11
-    T = λ/137.035999
-    ω = 2π/T
+    λ = λ_SI/U(5.2917721067e-11)
+    T = λ/U(137.035999)
+    ω = U(2π/T)
     λ,T,ω
 end
 
 # I_SI in W/cm²
-intensity{U<:AbstractFloat}(I_SI::U) = I_SI/3.5094452e16
+intensity{U<:AbstractFloat}(I_SI::U) = I_SI/U(3.5094452e16)
 
 # Gaussian envelope for the amplitude, fwhm of the intensity envelope
 # in cycles.
-gaussian{U<:AbstractFloat}(t::U, fwhm::U) = exp(-t.^2/(2(fwhm/(2*√(log(2))))^2))
+gaussian{U<:AbstractFloat}(t::U, fwhm::U) = exp(-t.^2/(2(fwhm/U(2*√(log(2))))^2))
 
 box{U<:AbstractFloat}(t::U, tmax::U, c::Bool) = !c || (t >= 0 && t <= tmax) ? one(U) : zero(U)
 
@@ -92,7 +92,7 @@ zero{U<:AbstractFloat}(::Type{TransverseField{U}}) = Vec{2,U}(zero(U), zero(U))
 
 call{U<:AbstractFloat}(field::Field{U}, t::AbstractVector{U}) = map(field, t)
 
-function gdd_params{U<:AbstractFloat}(λ_SI::U, τ₀::U, η::U = 0.0;
+function gdd_params{U<:AbstractFloat}(λ_SI::U, τ₀::U, η::U = zero(U);
                                       gdd_phase = false)
     γ = τ₀^2/(8log(2))
     γ² = γ^2
@@ -101,8 +101,8 @@ function gdd_params{U<:AbstractFloat}(λ_SI::U, τ₀::U, η::U = 0.0;
     A = √(γ/√(γ² + η²))
     gdd_phase && (A *= exp(im*atan2(-η,γ)/2))
 
-    a = 1./4*(γ/(γ² + η²))
-    b = 1./2*(η/(γ² + η²))
+    a = one(U)./4*(γ/(γ² + η²))
+    b = one(U)./2*(η/(γ² + η²))
     A,a,b
 end
 
@@ -112,12 +112,12 @@ end
 # identically vanish outside the interval [0,tmax]
 function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
                                  tmax::U, fwhm::U,
-                                 q::U = 1.0,
-                                 cep::U = 0.0, gdd::U = 0.0;
+                                 q::U = one(U),
+                                 cep::U = zero(U), gdd::U = zero(U);
                                  gdd_phase = false,
                                  vanish = true)
     λ,T,ω = fundamental(λ_SI)
-    T2 = (2.41888430e-17T)^2
+    T2 = U(2.41888430e-17T)^2
     I = intensity(I_SI)
     E₀ = √(I)
 
@@ -133,7 +133,7 @@ function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
 
     E = t -> A*exp(im*2π*q*(t-tmax/2) + im*q*φ₀)*exp(-(a-im*b)*(t-tmax/2)^2)
 
-    LinearField(λ, T, ω, tmax, t -> real(E(t)), vanish)
+    LinearField(λ, T, ω, tmax, t -> U(real(E(t))), vanish)
 end
 
 export Field, CompositeField, fundamental, delay, gdd_params, pulse, eltype, call, (+)
