@@ -63,6 +63,12 @@ intensity{U<:AbstractFloat}(I_SI::U) = I_SI/U(3.5094452e16)
 # in cycles.
 gaussian{U<:AbstractFloat}(t::U, fwhm::U) = exp(-t.^2/(2(fwhm/U(2*√(log(2))))^2))
 
+function top_hat(t, ramp, tmax)
+    ((t.>=ramp) .* (t.<tmax-ramp)) +
+        ((t.>=0) .* (t.<ramp)).*(t/ramp) +
+        (((t.>=tmax-ramp) .* (t.<tmax))).*((tmax-t)/ramp)
+end
+
 box{U<:AbstractFloat}(t::U, tmax::U, c::Bool) = !c || (t >= 0 && t <= tmax) ? one(U) : zero(U)
 
 type LinearField{U<:AbstractFloat} <: Field{U}
@@ -136,5 +142,5 @@ function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
     LinearField(λ, T, ω, tmax, t -> U(real(E(t))), vanish)
 end
 
-export Field, CompositeField, fundamental, delay, gdd_params, pulse, eltype, call, (+)
+export Field, CompositeField, fundamental, delay, gdd_params, pulse, eltype, call, (+), top_hat
 end # module
