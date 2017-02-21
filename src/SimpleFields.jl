@@ -140,5 +140,27 @@ function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
     LinearField(λ, T, ω, tmax, t -> U(real(E(t))), vanish)
 end
 
-export Field, CompositeField, fundamental, delay, gdd_params, pulse, eltype, call, (+), top_hat
+function strong_field_params{U<:AbstractFloat}(λ_SI::U, I_SI::U, Ip::U)
+    λ,T,ω = fundamental(λ_SI)
+    I = intensity(I_SI)
+    E₀ = √(I)
+    Up = I/(4*ω^2)
+    cutoff = 3.17Up - Ip
+    keldysh = ω*√(2abs(Ip))/E₀
+    Dict(:lambda => λ,
+         :lambda_SI => λ_SI,
+         :T => T,
+         :omega => ω,
+         :I => I,
+         :I_SI => I_SI,
+         :E0 => E₀,
+         :alpha0 => E₀/ω^2,
+         :Ip => Ip,
+         :Up => Up,
+         :keldysh => keldysh,
+         :cutoff => cutoff,
+         :cutoff_HO => cutoff/ω)
+end
+
+export Field, CompositeField, fundamental, delay, gdd_params, pulse, eltype, call, (+), top_hat, strong_field_params
 end # module
