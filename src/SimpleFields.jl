@@ -159,6 +159,7 @@ function strong_field_params{U<:AbstractFloat}(λ_SI::U, I_SI::U, Ip::U)
          :I => I,
          :I_SI => I_SI,
          :E0 => E₀,
+         :A0 => E₀/ω,
          :alpha0 => E₀/ω^2,
          :Ip => Ip,
          :Up => Up,
