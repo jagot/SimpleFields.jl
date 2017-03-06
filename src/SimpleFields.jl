@@ -69,6 +69,11 @@ function top_hat(t, ramp, tmax)
         (((t.>=tmax-ramp) .* (t.<tmax))).*((tmax-t)/ramp)
 end
 
+function top_hat_trunc(t, ramp, tmax)
+    ((t.>=ramp) .* (t.<tmax)) +
+        ((t.>=0) .* (t.<ramp)).*(t/ramp)
+end
+
 box{U<:AbstractFloat}(t::U, tmax::U, c::Bool) = !c || (t >= 0 && t <= tmax) ? one(U) : zero(U)
 
 type LinearField{U<:AbstractFloat} <: Field{U}
@@ -162,5 +167,5 @@ function strong_field_params{U<:AbstractFloat}(λ_SI::U, I_SI::U, Ip::U)
          :cutoff_HO => cutoff/ω)
 end
 
-export Field, CompositeField, fundamental, delay, gdd_params, pulse, eltype, call, (+), top_hat, strong_field_params
+export Field, CompositeField, fundamental, delay, gdd_params, pulse, eltype, call, (+), top_hat, top_hat_trunc, strong_field_params
 end # module
