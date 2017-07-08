@@ -1,8 +1,8 @@
 module SimpleFields
 using FixedSizeArrays
-import Base: eltype, call, zero, (+)
+import Base: eltype, zero, (+)
 
-abstract Field{U<:AbstractFloat}
+abstract type Field{U<:AbstractFloat} end
 eltype{U<:AbstractFloat}(::Type{Field{U}}) = U
 
 type CompositeField{U<:AbstractFloat} <: Field{U}
@@ -14,7 +14,7 @@ type CompositeField{U<:AbstractFloat} <: Field{U}
     zero
 end
 
-function call{U<:AbstractFloat}(field::CompositeField{U}, t::U)
+function (field::CompositeField{U}){U<:AbstractFloat}(t::U)
     f = field.zero
     for c in field.components
         f += c(t)
@@ -43,7 +43,7 @@ type DelayedField{U<:AbstractFloat,F<:Field} <: Field{U}
     tmax::U
 end
 eltype{U<:AbstractFloat,F<:Field}(::Type{DelayedField{U,F}}) = eltype(F)
-call{U<:AbstractFloat}(field::DelayedField{U}, t::U) = field.f(t-field.tau)
+(field::DelayedField{U}){U<:AbstractFloat}(t::U) = field.f(t-field.tau)
 zero{U<:AbstractFloat,F<:Field}(::Type{DelayedField{U,F}}) = zero(F)
 
 delay{U<:AbstractFloat, F<:Field}(f::F, tau::U) = DelayedField{U,F}(f, tau, f.λ, f.T, f.ω, f.tmax+tau)
@@ -85,7 +85,7 @@ type LinearField{U<:AbstractFloat} <: Field{U}
     vanish::Bool
 end
 
-call{U<:AbstractFloat}(field::LinearField{U}, t::U) = field.Ez(t)*box(t,field.tmax,field.vanish)
+(field::LinearField{U}){U<:AbstractFloat}(t::U) = field.Ez(t)*box(t,field.tmax,field.vanish)
 zero{U<:AbstractFloat}(::Type{LinearField{U}}) = zero(U)
 
 type TransverseField{U<:AbstractFloat} <: Field{U}
@@ -98,7 +98,7 @@ type TransverseField{U<:AbstractFloat} <: Field{U}
     vanish::Bool
 end
 
-call{U<:AbstractFloat}(field::TransverseField{U}, t::U) = Vec{2,U}(field.Ez(t),field.Ex(t))*box(t,field.tmax,field.vanish)
+(field::TransverseField{U}){U<:AbstractFloat}(t::U) = Vec{2,U}(field.Ez(t),field.Ex(t))*box(t,field.tmax,field.vanish)
 zero{U<:AbstractFloat}(::Type{TransverseField{U}}) = Vec{2,U}(zero(U), zero(U))
 
 function gdd_params{U<:AbstractFloat}(λ_SI::U, τ₀::U, η::U = zero(U);
@@ -168,5 +168,5 @@ function strong_field_params{U<:AbstractFloat}(λ_SI::U, I_SI::U, Ip::U)
          :cutoff_HO => cutoff/ω)
 end
 
-export Field, CompositeField, fundamental, delay, gdd_params, pulse, eltype, call, (+), top_hat, top_hat_trunc, strong_field_params
+export Field, CompositeField, fundamental, delay, gdd_params, pulse, eltype, (+), top_hat, top_hat_trunc, strong_field_params
 end # module
