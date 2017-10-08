@@ -1,5 +1,5 @@
 module SimpleFields
-using FixedSizeArrays
+using StaticArrays
 import Base: eltype, zero, (+)
 
 abstract type Field{U<:AbstractFloat} end
@@ -98,8 +98,8 @@ type TransverseField{U<:AbstractFloat} <: Field{U}
     vanish::Bool
 end
 
-(field::TransverseField{U}){U<:AbstractFloat}(t::U) = Vec{2,U}(field.Ez(t),field.Ex(t))*box(t,field.tmax,field.vanish)
-zero{U<:AbstractFloat}(::Type{TransverseField{U}}) = Vec{2,U}(zero(U), zero(U))
+(field::TransverseField{U}){U<:AbstractFloat}(t::U) = SVector{2,U}(field.Ez(t),field.Ex(t)).*box(t,field.tmax,field.vanish)
+zero{U<:AbstractFloat}(::Type{TransverseField{U}}) = SVector{2,U}(zero(U), zero(U))
 
 function gdd_params{U<:AbstractFloat}(λ_SI::U, τ₀::U, η::U = zero(U);
                                       gdd_phase = false)
