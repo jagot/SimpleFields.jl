@@ -115,16 +115,23 @@ function gdd_params{U<:AbstractFloat}(λ_SI::U, τ₀::U, η::U = zero(U);
     A,a,b
 end
 
-# λ_SI in meters, I_SI in W/cm², tmax in cycles, (Fourier-limited)
-# fwhm in seconds, cep in units of π, gdd in seconds squared. The
-# pulse will be centered at tmax/2. If vanish is true, the pulse will
-# identically vanish outside the interval [0,tmax]
+"""`λ_SI` in meters, `I_SI` in W/cm², `tmax` in cycles,
+(Fourier-limited) `fwhm` in seconds, `cep` in units of π, `gdd` in
+seconds squared. The pulse will be centered at `tmax/2`. If `vanish`
+is `true`, the pulse will identically vanish outside the interval
+[0,`tmax`]. `ξ` is the ratio of the minor to major axes of the ellipse
+(if non-zero, will be 3d pulse automatically, if zero, will be 2d by
+default, but can be overridden)."""
 function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
                                  tmax::U, fwhm::U,
                                  q::U = one(U),
                                  cep::U = zero(U), gdd::U = zero(U);
+                                 ξ::U = zero(U),
+                                 threeD::Bool = ξ != zero(U),
                                  gdd_phase = false,
                                  vanish = true)
+    ξ != 0 && !threeD && error("Can't specify non-linearly polarized pulses in 2d")
+
     λ,T,ω = fundamental(λ_SI)
     T2 = U(2.41888430e-17T)^2
     I = intensity(I_SI)
@@ -132,17 +139,17 @@ function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
 
     A,a,b = gdd_params(λ_SI, fwhm, gdd; gdd_phase = gdd_phase)
 
-    A *= E₀
-
     # Transfer to cycles as time base
     a *= T2
     b *= T2
 
     φ₀ = cep*π
 
-    E = t -> A*exp(im*2π*q*(t-tmax/2) + im*q*φ₀)*exp(-(a-im*b)*(t-tmax/2)^2)
+    E = t -> E₀/√(1+ξ^2)*exp(im*2π*q*(t-tmax/2) + im*q*φ₀)*A*exp(-(a-im*b)*(t-tmax/2)^2)
 
-    LinearField(λ, T, ω, tmax, t -> U(real(E(t))), vanish)
+    threeD ?
+        TransverseField(λ, T, ω, tmax, t -> U(real(E(t))), t -> U(real(im*ξ*E(t))), vanish) :
+        LinearField(λ, T, ω, tmax, t -> U(real(E(t))), vanish)
 end
 
 function strong_field_params{U<:AbstractFloat}(λ_SI::U, I_SI::U, Ip::U)
