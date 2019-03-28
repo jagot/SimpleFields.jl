@@ -3,9 +3,9 @@ using StaticArrays
 import Base: eltype, zero, (+)
 
 abstract type Field{U<:AbstractFloat} end
-eltype{U<:AbstractFloat}(::Type{Field{U}}) = U
+eltype(::Type{Field{U}}) where {U<:AbstractFloat} = U
 
-type CompositeField{U<:AbstractFloat} <: Field{U}
+struct CompositeField{U<:AbstractFloat} <: Field{U}
     components::Vector{Field}
     λ::U
     T::U
@@ -14,7 +14,7 @@ type CompositeField{U<:AbstractFloat} <: Field{U}
     zero
 end
 
-function (field::CompositeField{U}){U<:AbstractFloat}(t::U)
+function (field::CompositeField{U})(t::U) where {U<:AbstractFloat}
     f = field.zero
     for c in field.components
         f += c(t)
@@ -22,19 +22,19 @@ function (field::CompositeField{U}){U<:AbstractFloat}(t::U)
     f
 end
 
-function (+){F1<:Field,F2<:Field}(a::F1, b::F2)
+function (+)(a::F1, b::F2) where {F1<:Field,F2<:Field}
     zero(F1) == zero(F2) || error("Can only add fields of same type")
     a.λ == b.λ || error("Can only add fields of the same fundamental wavelength")
     CompositeField{eltype(a)}([a, b], a.λ, a.T, a.ω, max(a.tmax, b.tmax), zero(F1))
 end
 
-function (+){F<:Field}(a::CompositeField, b::F)
+function (+)(a::CompositeField, b::F) where {F<:Field}
     a.zero == zero(typeof(b)) || error("Can only add fields of same type")
     a.λ == b.λ || error("Can only add fields of the same fundamental wavelength")
     CompositeField{eltype(a)}([a.components..., b], a.λ, a.T, a.ω, max(a.tmax, b.tmax), a.zero)
 end
 
-type DelayedField{U<:AbstractFloat,F<:Field} <: Field{U}
+struct DelayedField{U<:AbstractFloat,F<:Field} <: Field{U}
     f::F
     tau::U
     λ::U
@@ -42,14 +42,14 @@ type DelayedField{U<:AbstractFloat,F<:Field} <: Field{U}
     ω::U
     tmax::U
 end
-eltype{U<:AbstractFloat,F<:Field}(::Type{DelayedField{U,F}}) = eltype(F)
-(field::DelayedField{U}){U<:AbstractFloat}(t::U) = field.f(t-field.tau)
-zero{U<:AbstractFloat,F<:Field}(::Type{DelayedField{U,F}}) = zero(F)
+eltype(::Type{DelayedField{U,F}}) where {U<:AbstractFloat,F<:Field} = eltype(F)
+(field::DelayedField{U})(t::U) where {U<:AbstractFloat} = field.f(t-field.tau)
+zero(::Type{DelayedField{U,F}}) where {U<:AbstractFloat,F<:Field} = zero(F)
 
-delay{U<:AbstractFloat, F<:Field}(f::F, tau::U) = DelayedField{U,F}(f, tau, f.λ, f.T, f.ω, f.tmax+tau)
+delay(f::F, tau::U) where {U<:AbstractFloat, F<:Field} = DelayedField{U,F}(f, tau, f.λ, f.T, f.ω, f.tmax+tau)
 
 # λ_SI in meters
-function fundamental{U<:AbstractFloat}(λ_SI::U)
+function fundamental(λ_SI::U) where {U<:AbstractFloat}
     λ = λ_SI/U(5.2917721067e-11)
     T = λ/U(137.035999)
     ω = U(2π/T)
@@ -57,11 +57,11 @@ function fundamental{U<:AbstractFloat}(λ_SI::U)
 end
 
 # I_SI in W/cm²
-intensity{U<:AbstractFloat}(I_SI::U) = I_SI/U(3.5094452e16)
+intensity(I_SI::U) where {U<:AbstractFloat} = I_SI/U(3.5094452e16)
 
 # Gaussian envelope for the amplitude, fwhm of the intensity envelope
 # in cycles.
-gaussian{U<:AbstractFloat}(t::U, fwhm::U) = exp(-t.^2/(2(fwhm/U(2*√(log(2))))^2))
+gaussian(t::U, fwhm::U) where {U<:AbstractFloat} = exp(-t.^2/(2(fwhm/U(2*√(log(2))))^2))
 
 function top_hat(t, ramp, tmax)
     ((t.>=ramp) .* (t.<tmax-ramp)) +
@@ -74,9 +74,9 @@ function top_hat_trunc(t, ramp, tmax)
         ((t.>=0) .* (t.<ramp)).*(t/ramp)
 end
 
-box{U<:AbstractFloat}(t::U, tmax::U, c::Bool) = !c || (t >= 0 && t <= tmax) ? one(U) : zero(U)
+box(t::U, tmax::U, c::Bool) where {U<:AbstractFloat} = !c || (t >= 0 && t <= tmax) ? one(U) : zero(U)
 
-type LinearField{U<:AbstractFloat} <: Field{U}
+struct LinearField{U<:AbstractFloat} <: Field{U}
     λ::U
     T::U
     ω::U
@@ -85,10 +85,10 @@ type LinearField{U<:AbstractFloat} <: Field{U}
     vanish::Bool
 end
 
-(field::LinearField{U}){U<:AbstractFloat}(t::U) = field.Ez(t)*box(t,field.tmax,field.vanish)
-zero{U<:AbstractFloat}(::Type{LinearField{U}}) = zero(U)
+(field::LinearField{U})(t::U) where {U<:AbstractFloat} = field.Ez(t)*box(t,field.tmax,field.vanish)
+zero(::Type{LinearField{U}}) where {U<:AbstractFloat} = zero(U)
 
-type TransverseField{U<:AbstractFloat} <: Field{U}
+struct TransverseField{U<:AbstractFloat} <: Field{U}
     λ::U
     T::U
     ω::U
@@ -98,11 +98,11 @@ type TransverseField{U<:AbstractFloat} <: Field{U}
     vanish::Bool
 end
 
-(field::TransverseField{U}){U<:AbstractFloat}(t::U) = SVector{2,U}(field.Ez(t),field.Ex(t)).*box(t,field.tmax,field.vanish)
-zero{U<:AbstractFloat}(::Type{TransverseField{U}}) = SVector{2,U}(zero(U), zero(U))
+(field::TransverseField{U})(t::U) where {U<:AbstractFloat} = SVector{2,U}(field.Ez(t),field.Ex(t)).*box(t,field.tmax,field.vanish)
+zero(::Type{TransverseField{U}}) where {U<:AbstractFloat} = SVector{2,U}(zero(U), zero(U))
 
-function gdd_params{U<:AbstractFloat}(λ_SI::U, τ₀::U, η::U = zero(U);
-                                      gdd_phase = false)
+function gdd_params(λ_SI::U, τ₀::U, η::U = zero(U);
+                    gdd_phase = false) where {U<:AbstractFloat}
     γ = τ₀^2/(8log(2))
     γ² = γ^2
     η² = η^2
@@ -122,14 +122,14 @@ is `true`, the pulse will identically vanish outside the interval
 [0,`tmax`]. `ξ` is the ratio of the minor to major axes of the ellipse
 (if non-zero, will be 3d pulse automatically, if zero, will be 2d by
 default, but can be overridden)."""
-function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
-                                 tmax::U, fwhm::U,
-                                 q::U = one(U),
-                                 cep::U = zero(U), gdd::U = zero(U);
-                                 ξ::U = zero(U),
-                                 threeD::Bool = ξ != zero(U),
-                                 gdd_phase = false,
-                                 vanish = true)
+function pulse(λ_SI::U, I_SI::U,
+               tmax::U, fwhm::U,
+               q::U = one(U),
+               cep::U = zero(U), gdd::U = zero(U);
+               ξ::U = zero(U),
+               threeD::Bool = ξ != zero(U),
+               gdd_phase = false,
+               vanish = true) where {U<:AbstractFloat}
     ξ != 0 && !threeD && error("Can't specify non-linearly polarized pulses in 2d")
 
     λ,T,ω = fundamental(λ_SI)
@@ -152,7 +152,7 @@ function pulse{U<:AbstractFloat}(λ_SI::U, I_SI::U,
         LinearField(λ, T, ω, tmax, t -> U(real(E(t))), vanish)
 end
 
-function strong_field_params{U<:AbstractFloat}(λ_SI::U, I_SI::U, Ip::U)
+function strong_field_params(λ_SI::U, I_SI::U, Ip::U) where {U<:AbstractFloat}
     λ,T,ω = fundamental(λ_SI)
     I = intensity(I_SI)
     E₀ = √(I)
